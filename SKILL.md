@@ -1,69 +1,50 @@
 ---
 name: grounding-visual-prompts
-description: Use when writing, replicating, or fixing image or video generation prompts from reference clips, GIFs, screenshots, or characters — especially when generated outputs have reversed motion or gaze direction, vanishing props, awkward pauses, jitter or trembling, invented actions, or reference-vs-prompt conflicts.
+description: Use when interpreting reference GIFs, clips or stills, adapting a reference performance to new characters, or diagnosing image/video generations that miss the action, intent, timing, identity or continuity.
 ---
 
-# Grounding Visual Prompts
+# 从参考画面到生成提示词
 
-```
-NO GENERATION PROMPT WITHOUT A VERIFIED VISUAL-LOGIC SPEC FIRST.
-```
+先弄清观众应该看懂的那件事，再决定该改动作、参考图、生成参数还是剪辑。用户只问“看懂了吗”“哪里不同”时，交付读片或对照，到这里结束。写提示词、准备请求、付费试拍是不同的任务。
 
-**Violating the letter of the gates is violating the spirit of the gates.** Never draft, patch, or submit an image/video prompt from memory, low-fps sheets, or partial user complaints. Produce Gates 1–4 visibly first. For target-model syntax (tags, timestamps, limits, negative fields), always read that model's own guide.
+## 1. 先看原件，再看旧答案
 
-**Use when:** Replicating/remastering clips or GIFs, character-swapping onto reference motion, writing I2I/I2V/reference prompts, or diagnosing failed outputs.
-**Skip when:** Pure open-ended ideation with no reference assets and no spatial/prop continuity constraints.
+找出原录屏、清理后的单循环、角色图、旧生成片、旧提示词分别是什么。先按原速看原件的完整动作，记下初步读法，再对照文件名、旧提示词和失败样片。文件名、模型自述、前一个助手的解释都不能单独证明剧情。
 
-## The 4 Pre-Prompt Gates (REQUIRED)
+有工具时探测尺寸、帧率、时长、音轨。短 GIF 可用 8 fps 起步定位节拍；对碰撞、换手、视线、飞牌等决定性瞬间，回到原始帧率，逐帧查看事前、接触、事后，并放大遮挡部位。检查循环边界的首尾三帧；若录屏从动作中间开始，先在完整录屏里找一次连续表演。跳回起点不是第二次动作。裁掉页面、白帧等污染并复核，再用作运动参考。原件保留。只能看到静帧或缩略图时，明确能查到什么、缺哪一拍；遮挡和缺帧不会因为插帧或多次放大而变成证据。
 
-Produce all 4 Gates visibly — including the full Gate 2 and Gate 3 markdown tables — **before** drafting or editing any prompt. Never replace the tables with prose bullets. **If Gate 1 or Gate 4 fails, STOP** — clean local clips first or ask the user how to resolve asset conflicts. **Never output a "ready-to-submit" JSON with unresolved blockers tucked into footnotes.**
+## 2. 把自己的读法拿来质疑一次
 
-### Gate 1 — Source Cleanliness & >=8fps Observation Log
-1. Probe every video (`ffprobe` resolution, fps, duration, audio) and view reference images directly.
-2. Extract **>=8fps frames** (or every frame if <=3s) and explicitly inspect the **first 3 and last 3 frames**.
-3. If loop-reset jump cuts, UI/white-screen frames, or boundary glitches appear -> **STOP: trim a clean single loop and re-verify its exact first and last frames.**
-4. **Track screen position progression:** For every moving subject, record its horizontal/vertical path across consecutive zoomed frames (`x_start -> x_mid -> x_exit`, e.g., `viewer-left -> center -> viewer-bottom-right`). Never trust direction claims in a broken previous prompt.
-5. Log only visible facts; mark unclear moments `[UNCERTAIN]` and zoom/re-extract. Never invent unseen acting or unheard audio (e.g., turning a silent open eating mouth into a roar, or inserting an extra roar beat when shock leads straight into action).
+先用一句话说清：谁想做什么，实际发生什么，观众在哪一拍明白。在角色替换片里，再问一句：换回真人，观众会认出哪种表演？留意预期与结果错位、双向互动被读成单向动作、舞步被读成手势，以及最后几帧才发生的反转。没有这些结构的镜头按实际内容描述。
 
-### Gate 2 — Beat, Gaze & Physics Vector Table (REQUIRED TABLE)
-Use **viewer-perspective coordinates** (`viewer-left`, `viewer-right`, `viewer-top`, `viewer-bottom`). Pair any anatomical side explicitly with viewer side (e.g., `right arm (viewer-left)`).
+分别标明**画面可见**、**解释及依据**、**用户已确认的创作意图**、**本次新增的改编**。用户明确解释原意后，按它指导复刻；原片没拍清的部分仍标注来源。先前确认的角色、动作和改编在后续修订中继续有效，直到用户改变它们。
 
-| Beat | Trigger | Visible Expression | Motion Vector (Viewer) | Recoil & Gaze Target | Continuous or Pause? |
-|---|---|---|---|---|---|
+对会改变表演的歧义，找一个确实说得通的替代解释，指出两种读法会让哪一爪、哪一件道具或哪一拍发生变化。用动作发生前的准备、接触的位置、双方的反应和道具的后果去区分。如果证据足够，直接给判断和依据。如果仍会导向两种不同拍法，主动提示具体风险并只问能裁决它的问题；同一批中已明确的镜头可继续分析。不能为凑数制造歧义。
 
-- **Newton & Gaze Check:** Impact vector must match exit trajectory (a kick moving `viewer-left -> viewer-right` exits `viewer-right`, never `viewer-left`), and ending gaze must follow the exit target.
-- **Duration Ratio Check:** If `target_duration > 1.5x source_duration`, pick the model's shortest valid duration or design a natural lead-in — never stretch one beat with a freeze.
+**提示用户的示例**：门口那一帧里黑白猫的爪子、杆和橘猫肚子重叠。现有提示写成杆回弹，可我看不清回弹；如果真正的笑点是瞄杆却打偏，就必须先让它对准杆，再让拳落在肚子。你想还原哪一种？用户已经说明“瞄杆误中肚子”时，直接采用，并把“杆回弹”的旧提示淘汰。
 
-### Gate 3 — Prop Conservation Ledger (REQUIRED TABLE)
-Trace every key prop through the **final 3 frames** of the source:
+## 3. 锁定能验收的动作，再选择素材
 
-| Prop | Start (Holder & Viewer Side) | Mid-Action State | End (Holder & Viewer Side) |
-|---|---|---|---|
+多镜头先给一张短表；单镜头用同样信息写两三句即可：
 
-Every prop must stay continuously held, drop visibly and remain in frame, or cleanly exit frame.
+| 镜头 | 可见动作和具体时刻 | 用户意图或有依据的读法 | 静音时必须看见的瞬间 | 会改变拍法的疑点或素材冲突 |
+|---|---|---|---|---|
 
-### Gate 4 — Reference-vs-Prompt Conflict Matrix
-Audit every `reference_image`, `reference_video`, `first_frame`, `file_id`, and user goal:
-1. **State conflict:** Never mark a mid-action image `fully_preserved` if the prompt asks for a different opening state — supply a matching clean opening frame, align opening action to the image, or downgrade to `partially_preserved` and ask user sign-off on risk first.
-2. **Stale-upload conflict:** Confirm every `file_id`/URL comes from the *newly cleaned* local file, never an older uncleaned upload.
-3. **Role/API conflict:** Confirm reference roles (`first_frame` vs `reference_image` vs `reference_video`) combine legally in the target model.
+复杂动作再按拍列出：触发者和对手、预备姿势、接触目标、反应与眼神、动作结束时的状态。方向用画面左/右，确有必要时再写角色解剖侧。眼神、反冲、故意停顿以实际表演为准。关键道具追踪起始持有者、接触时和结束时的位置；出框或被遮挡写明最后可见状态。例如碗要端稳，而一排麻将牌恰好要从整齐变成飞散。某条规律不能替代这段表演的证据。
 
-## Prompt Translation Contract
-- **Continuous causal narrative:** Write `trigger -> immediate reaction -> follow-through -> steady finish`. Place timestamps **only** where the target model's official guide requires them (e.g., shot cuts `[Shot 2]`, never micro-timestamps inside a single continuous shot).
-- **Positive stillness ("No Pink Elephants"):** Video models weakly parse `without trembling` or `zero shaking`. State desired physics positively (`lifts once and locks still in a steady pose`, `grips firmly throughout`).
-- **Zero ungrounded embellishment:** Every expression, vector, prop state, and sound must map 1-to-1 to Gates 1–3.
+为每件素材指定职责：角色外形、场景与机位、开场状态或动作节奏。查看图片本身：它拍的是蓄势还是结果？脸、爪、目标、旁观者是否同框且够大？需要完整舞步就留脚，需要受惊反应就留肩和脸。先看能否裁近、改用已有图或从正确动作前截帧；当首帧的空间关系或姿势根本不对，再重做图。向用户说明一条最有影响的风险及修法，例如“第一帧已经碰到头，模型少了抬手那一拍”。
 
-## Fixing Failed Generations & Post-Generation Check
-- **Full Audit, Never Patch:** On user complaints ("hand shakes", "prop vanishes", "weak expression"), extract >=8fps frames of **both** the failed output and clean source, then fill out **all 4 Gates from scratch** — auditing every row of Gate 2 (`Motion Vector` + `Recoil & Gaze Target`) against the broken prompt to catch **unreported** direction/gaze reversals, stale `file_id`s, micro-timestamps, and pink-elephant negatives.
-- **Post-Gen Verification:** Before claiming a generated output passes, extract `>=2fps` frames spanning the full clip and verify every row of Gate 2 (expression, motion vector, gaze) and Gate 3 (prop start/mid/end).
+调用前按所用**模型和接入服务**核实素材角色、可混合模式、尺寸、时长及画幅。核对上传记录指向所选片段和裁切版本；能用本地摘要或明确记录证明一致、且服务仍接受的文件可复用。无法确认来源时才重传。阻塞限定到受影响的镜头和操作。不得把错角色、旧裁片或未验证的参数组合说成已可提交。
 
-## Rationalizations & Red Flags — STOP and Re-Run Gates
+## 4. 写提示词与验片
 
-| Excuse | Reality |
-|---|---|
-| "User is rushing; just audit the 2 words complained about and skip tables." | Complaints hide reversed vectors, wrong gaze, and stale uploads. Fill every Gate 2 & 3 column from fresh frame progression. |
-| "Output ready-to-submit JSON and note dirty video / image conflict below." | Gate 1/4 failures block submission. Fix clips or stop with the blocker first. |
-| "Mark `<Picture 1>` `fully_preserved`, then tell text to omit an object at 0s." | Direct self-contradiction; visual anchors override text. |
-| "Add `without trembling` and `hold 00:00.25–00:01.20` to force compliance." | Negations trigger jitter ("pink elephant"); micro-timestamps cause robotic pauses. |
-| "Open mouth in a silent clip means it's roaring; add a roar beat." | Silent open mouth != roar. Never invent ungrounded acting or extra beats. |
-| "Reuse existing `mm_file://` URL to save time." | Reusing an uncleaned upload re-injects loop cuts. Verify upload provenance. |
+动作按真实先后写，明确角色图负责谁、视频提供哪段动作。把“很搞笑”换成可见的表演。首帧、中间动作、尾态相容；道具保持、离手或飞散都要写对。想要稳定就描述怎样握稳；切镜、时间戳和否定写法按目标模型的指南取舍。短素材遇到生成时长下限，优先原速演完、保留可剪余量；另加铺垫、声音或结尾反应属于改编。静音素材的嘴型不能证明原声。已获授权新增的 Vlog 旁观者、过场或声音可以写，标明它们的叙事作用。
+
+成片先静音原速看：不靠旁白，观众能否读出事前预期和结果？逐拍核对上面约定的瞬间；高速接触用原始帧率检查，低频抽帧只作索引。另看角色花色、主体比例、道具与眼神；有音频要求时再开声核对。分别报告成立、偏差、画面不足以验证的部分。解码成功或模型返回成功只说明文件可用。
+
+遇到返工，先指出偏差最早出现在哪一层：剧情理解、参考素材、提示词、模型执行或剪辑。剧情错了先修读法及受影响的下游内容；起始姿势错了先修图；动作正确但停留太久先试剪。做模型对比时尽量固定其他条件，先试最能区分两种判断的一条。针对局部修改沿用已核实的记录，复查关联节拍；原件或核心意图换了，再重读整段。
+
+## 用来检查读片质量的两个例子
+
+- **对镜伸爪**：只写“右爪伸、左爪伸”既能生成训话也能生成跳舞。创作者确认是妖娆舞之后，验收要看肩、腰、头和爪是否同拍，至少能看完整一组左右来回。会交替举爪但身体笔直，仍算少了表演。
+- **麻将**：创作者要的是摸到好牌、两爪激动按下、整排飞起。白猫出一张牌再看后方橘猫，即使人物、牌桌和机位全对，主要动作仍然失败。若只拿到按牌之前的残片，“要胡了”记为创作者确认，飞牌作为目标结尾单独验证。
